@@ -1,7 +1,7 @@
 {
   "name": "discord-pgp",
   "version": "0.0.1",
-  "description": "A BetterDiscord plugin which encrypts direct messages using OpenPGP.",
+  "description": "A BetterDiscord plugin which encrypts direct messages using the OpenPGP standard.",
   "main": "discord-pgp.plugin.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
