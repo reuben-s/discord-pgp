@@ -1,0 +1,6 @@
+{
+    "name": "discord-pgp",
+    "description": "A BetterDiscord plugin which encrypts direct messages using OpenPGP.",
+    "author": "reuben-s",
+    "version": "0.0.1"
+  }

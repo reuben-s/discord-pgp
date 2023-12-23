@@ -1,0 +1,22 @@
+{
+  "name": "discord-pgp",
+  "version": "0.0.1",
+  "description": "A BetterDiscord plugin which encrypts direct messages using OpenPGP.",
+  "main": "discord-pgp.plugin.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack --progress --color"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/reuben-s/discord-pgp/tree/main"
+  },
+  "author": "reuben-s",
+  "license": "ISC",
+  "dependencies": {
+    "openpgp": "^5.11.0"
+  },
+  "devDependencies": {
+    "webpack": "^5.89.0"
+  }
+}
