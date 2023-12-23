@@ -31,18 +31,16 @@ class PromptPassphrase extends BdApi.React.Component
   }
 }
 
-const eventManager = new EventEmitter();
+export function showPassphrasePrompt() {
+  const eventManager = new EventEmitter();
 
-function confirmCallback() 
-{
-  const passphrase = document.getElementById('discord-pgp-passphrase-input').value;
-  eventManager.emit('confirmed-passphrase', passphrase);
-  resolve(passphrase);
-};
-
-export function showPassphrasePrompt() 
-{
   return new Promise((resolve) => {
+    const confirmCallback = () => {
+      const passphrase = document.getElementById('discord-pgp-passphrase-input').value;
+      eventManager.emit('confirmed-passphrase', passphrase);
+      resolve(passphrase);
+    };
+
     BdApi.showConfirmationModal(
       'Enter new PGP passphrase',
       BdApi.React.createElement(PromptPassphrase),
