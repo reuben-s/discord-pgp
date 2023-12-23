@@ -1,5 +1,4 @@
-const openpgp = require('openpgp/lightweight');
-const { PromptPassphrase } = require('./PromptPassphrase.js');
+const { PgpManager } = require('./PgpManager.js');
 const { getCurrentDMUsername, checkIfGroupDM, checkIfBot } = require('./channelUtil.js');
 
 export default class DiscordPgp {
@@ -16,8 +15,8 @@ export default class DiscordPgp {
         if (this.toggled)
         {
             this.tooltip.label = 'Disable PGP encryption';
-            // Prompt for password if no PGP keys have been generated for the current direct message channel.
-            BdApi.alert('Enter new PGP passphrase', BdApi.React.createElement(PromptPassphrase)); // Need to implement persistence.
+            // Hand over control to pgpManager if encryption is enabled.
+            this.PgpManager.getKeyPair(this.currentUsername);
             this._refreshTooltip();
         }
         else
@@ -76,18 +75,9 @@ export default class DiscordPgp {
         }
     }
 
-    async _generateKeys(passphrase, username, userEmail)
-    {
-        return await openpgp.generateKey({
-            type: 'ecc', // Type of the key, defaults to ECC
-            curve: 'curve25519', // ECC curve name, defaults to curve25519
-            userIDs: [{ name: username, email: userEmail }], // you can pass multiple user IDs
-            passphrase: passphrase, // protects the private key
-            format: 'armored' // output key format, defaults to 'armored' (other options: 'binary' or 'object')
-        });
-    }
-
     start() {
+        console.clear();
+
         const targetNode = document.getElementById('app-mount');
         const config = { attributes: false, childList: true, subtree: true };
 
@@ -99,6 +89,8 @@ export default class DiscordPgp {
                 }
             }
         };
+
+        this.PgpManager = new PgpManager('discord-pgp.json');
 
         this.dmOpen = false;
         this.currentUsername = '';
@@ -117,14 +109,7 @@ export default class DiscordPgp {
             console.log(`discord-pgp-> Client sending new message: '${args[1].content}'`);
         })
 
-        const currentUser = BdApi.Webpack.getByKeys('getCurrentUser').getCurrentUser()
-
-        console.clear();
-        this._generateKeys('blah blah blah', currentUser.username, currentUser.email).then(({ privateKey, publicKey, revocationCertificate }) => {
-            console.log(privateKey);     // '-----BEGIN PGP PRIVATE KEY BLOCK ... '
-            console.log(publicKey);      // '-----BEGIN PGP PUBLIC KEY BLOCK ... '
-            console.log(revocationCertificate); // '-----BEGIN PGP PUBLIC KEY BLOCK ... '
-        });
+        // const currentUser = BdApi.Webpack.getByKeys('getCurrentUser').getCurrentUser()
         console.log('discord-pgp-> Plugin successfully started.');
     } 
 
