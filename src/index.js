@@ -10,9 +10,9 @@ export default class DiscordPgp {
             this.toggle.hide();
             return;
         }
-        //const user = BdApi.findModuleByProps("getUser").getUser(channelInfo[0].recepient)
         else if (channel.type == 1 && !channel.isSystemDM() && !channel.rawRecipients[0].bot)
         {
+            this.toggle.setCurrentChannel(channel);
             this.toggle.show()
             console.log('discord-pgp-> In DMs.');
         }
@@ -24,19 +24,15 @@ export default class DiscordPgp {
 
     start() {
         console.clear();
-
-        const MessageManager = BdApi.Webpack.getByKeys('sendMessage');
-        const ChannelSelectorManager = BdApi.Webpack.getByKeys('selectChannel')
-
-        BdApi.Patcher.before('discord-pgp', MessageManager, 'sendMessage', (thisObject, args) => {
-            console.log(`discord-pgp-> Client sending new message: '${args[1].content}'`);
-        });
+        
+        const ChannelSelectorManager = BdApi.Webpack.getByKeys('selectChannel');
+        
+        this.toggle = new Toggle();
+        this._selectChannelPatch(null, [{ channelId: BdApi.Webpack.getByKeys('getChannelId').getChannelId() }]) // Check if we are currently in DMs when plugin starts.
 
         // Patch selectChannel function.
         this._selectChannelPatch = this._selectChannelPatch.bind(this);
         BdApi.Patcher.after('discord-pgp', ChannelSelectorManager, 'selectChannel', this._selectChannelPatch);
-
-        this.toggle = new Toggle();
 
         console.log('discord-pgp-> Plugin successfully started.');
     } 

@@ -1,13 +1,43 @@
-const { PgpManager } = require('./PgpManager.js');
+const { PgpUtil } = require('./PgpUtil.js');
+const { DbManager } = require('./DbManager.js');
+const { showPassphrasePrompt } = require("./PromptPassphrase.js");
+
+// This code is really bad, will re-write at some point.
+
 export class Toggle
 {
     constructor()
     {
-        this.pgpManager = new PgpManager('discord-pgp.json');
+        this._dbManager = new DbManager('discord-pgp.json');
+        this._currentUser = BdApi.Webpack.getByKeys('getCurrentUser').getCurrentUser();
 
         this._toggleToggled = this._toggleToggled.bind(this);
-        this.toggled = false;
         this.currentState = "show";
+        
+        this._MessageManager = BdApi.Webpack.getByKeys('sendMessage');
+
+        BdApi.Patcher.before('discord-pgp', this._MessageManager, 'sendMessage', (thisObject, args) => {
+            if (!this.toggled) return;
+
+            if (args[1].hasOwnProperty('automated'))
+            {
+                delete args[1]['automated'];
+            }
+            else
+            {
+                // Messages encrypted here.
+                args[1].content = `MODIFIED ${args[1].content}`;
+            }
+
+            console.log(`discord-pgp-> Client sending new message: '${args[1].content}'`);
+        });
+        /*
+        BdApi.Patcher.before('discord-pgp', MessageManager, 'receiveMessage', (thisObject, args) => {
+            console.log(args);
+        });
+        */
+
+        this._currentChannel = {};
         this._generateToggle();
     }
 
@@ -17,13 +47,24 @@ export class Toggle
             this.toggle.remove();
             return;
         };
-
-        this.toggle = document.createElement('div');
+        this.toggle = document.createElement("div");
         this.toggle.className = 'bd-switch';
-        this.toggle.innerHTML = '<input id=\'enableEncryption\' type=\'checkbox\'><div class=\'bd-switch-body\'><svg class=\'bd-switch-slider\' viewBox=\'0 0 28 20\' preserveAspectRatio=\'xMinYMid meet\'><rect class=\'bd-switch-handle\' fill=\'white\' x=\'4\' y=\'0\' height=\'20\' width=\'20\' rx=\'10\'></rect><svg class=\'bd-switch-symbol\' viewBox=\'0 0 20 20\' fill=\'none\'><path></path><path></path></svg></svg>';
+        this.toggle.innerHTML = `
+        <input id="discord-pgp-toggle-encryption-on-off" type="checkbox"/>
+        <div class="bd-switch-body">
+            <svg class="bd-switch-slider" viewBox="0 0 28 20" preserveAspectRatio="xMinYMid meet">
+            <rect class="bd-switch-handle" fill="white" x="4" y="0" height="20" width="20" rx="10"></rect>
+                <svg class="bd-switch-symbol" viewBox="0 0 20 20" fill="none">
+                    <path></path>
+                    <path></path>
+                </svg>
+            </svg>
+        </div>
+        `;
         const userBanner = document.querySelector('.children__32014');
         this.tooltip = BdApi.UI.createTooltip(this.toggle, 'Enable PGP encryption', { side: 'bottom' });
-        this.toggle.addEventListener('click', this._toggleToggled);
+        this.toggle.addEventListener('change', this._toggleToggled);
+        this.toggled = false;
 
         if (this.toggle == null) this._generateToggle();
 
@@ -47,12 +88,30 @@ export class Toggle
     _toggleToggled()
     {
         this.toggled = !this.toggled;
+
         console.log('discord-pgp-> Toggled.')
         if (this.toggled)
         {
             this.tooltip.label = 'Disable PGP encryption';
-            // Hand over control to pgpManager if encryption is enabled.
-            this.pgpManager.getKeyPair(this.currentUsername);
+            this._dbManager.getChannel(this._currentChannel.id, (channelJson) => {
+                if (channelJson["client"]["public-key"] == null && channelJson["client"]["private-key"] == null)
+                {
+                    // Prompt user for new passphrase
+                    showPassphrasePrompt().then((passphrase) => {
+                        // Generate key pair with passphrase
+                        PgpUtil.generateKeyPair(this._currentUser.username, this._currentUser.email, passphrase).then(({ privateKey, publicKey, revocationCertificate }) => {
+                            this._dbManager.setClientKeyPair(this._currentChannel.id, publicKey, privateKey);
+                            console.log('discord-pgp-> Generated new key pair.');
+                            this._MessageManager.sendMessage(this._currentChannel.id, { content: `\`\`\`${publicKey}\`\`\`Don't understand this message? You're probably not using [discord-pgp](https://github.com/reuben-s/discord-pgp).`, invalidEmojis: [], tts: false, validNonShortcutEmojis: [], automated: true });
+                            console.log('discord-pgp-> Shared new public key.');
+                        });
+                    });
+                }
+                // Now handle encryption.
+            });
+
+            //this.pgpManager.getKeyPair(this._currentChannel.rawRecipients[0].username);
+
             this._refreshTooltip();
         }
         else
@@ -66,6 +125,11 @@ export class Toggle
     {
         this.tooltip.hide();
         this.tooltip.show();
+    }
+
+    setCurrentChannel(channel)
+    {
+        this._currentChannel = channel;
     }
 
     show()
