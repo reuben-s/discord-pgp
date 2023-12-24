@@ -16,21 +16,8 @@ export class Toggle
         
         this._MessageManager = BdApi.Webpack.getByKeys('sendMessage');
 
-        BdApi.Patcher.before('discord-pgp', this._MessageManager, 'sendMessage', (thisObject, args) => {
-            if (!this.toggled) return;
-
-            if (args[1].hasOwnProperty('automated'))
-            {
-                delete args[1]['automated'];
-            }
-            else
-            {
-                // Messages encrypted here.
-                args[1].content = `MODIFIED ${args[1].content}`;
-            }
-
-            console.log(`discord-pgp-> Client sending new message: '${args[1].content}'`);
-        });
+        this._sendMessagePatch = this._sendMessagePatch.bind(this);
+        BdApi.Patcher.before('discord-pgp', this._MessageManager, 'sendMessage', this._sendMessagePatch);
         /*
         BdApi.Patcher.before('discord-pgp', MessageManager, 'receiveMessage', (thisObject, args) => {
             console.log(args);
@@ -39,6 +26,23 @@ export class Toggle
 
         this._currentChannel = {};
         this._generateToggle();
+    }
+
+    _sendMessagePatch(thisObject, args)
+    {
+        if (!this.toggled) return;
+
+        if (args[1].hasOwnProperty('automated'))
+        {
+            delete args[1]['automated'];
+        }
+        else
+        {
+            // Messages encrypted here.
+            args[1].content = `MODIFIED ${args[1].content}`;
+        }
+
+        console.log(`discord-pgp-> Client sending new message: '${args[1].content}'`);
     }
 
     _generateToggle()

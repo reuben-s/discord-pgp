@@ -13,7 +13,7 @@ Build the project using webpack
 ```
 npm run build
 ```
-The plugin will now be found in the `dist` folder within the project files. Copy the `discord-pgp.plugin.js` file into the BetterDiscord plugins directory.
+The plugin can be found in the `dist` folder within the project files upon completion of the build. Copy the `discord-pgp.plugin.js` file into the BetterDiscord plugins directory. The plugin will will work out of the box.
 
 ## Dependencies
 - [Webpack](https://github.com/webpack/webpack)
