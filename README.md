@@ -1,6 +1,5 @@
 # discord-pgp
 A BetterDiscord plugin which encrypts direct messages using the OpenPGP standard.
-
 ## Building
 Clone the repository
 ```
@@ -19,3 +18,7 @@ The plugin will now be found in the `dist` folder within the project files. Copy
 ## Dependencies
 - [Webpack](https://github.com/webpack/webpack)
 - [OpenPGP.js](https://github.com/openpgpjs/openpgpjs)
+
+
+## The future
+Right now, data persistence is achieved by reading and writing to a JSON file. This is unencrypted (exposing private keys) and uses an uneccessary amount of resources due to the amount of read/writes taken to store data. In the future I would like to encrypt this storage and add some sort of cache to the plugin to reduce the amount of file read/writes.
