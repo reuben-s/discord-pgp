@@ -1,5 +1,9 @@
 # discord-pgp
 A BetterDiscord plugin which encrypts direct messages using the OpenPGP standard.
+
+> [!NOTE]  
+> I developed this quickly as a proof of concept, and I am aware of bugs that exist in the software. Do not use this in situations where security is paramount (you should probably find an alternative to Discord at that point)!
+
 ## Building
 Clone the repository
 ```
