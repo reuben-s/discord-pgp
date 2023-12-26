@@ -11,18 +11,17 @@ class AbortedMessage extends BdApi.React.Component
       'div',
       null,
       BdApi.React.createElement(
-        'span',
+        'h3',
         { 
             className: 'markup_a7e664 messageContent__21e69',
             style: { color: 'red' }
         },
         'Message send has been aborted.'
       ),
-      BdApi.React.createElement('br'),
       BdApi.React.createElement(
-        'span',
+        'h3',
         { className: 'markup_a7e664 messageContent__21e69' },
-        'Recipient has not yet provided their public key.'
+        'Requesting public key from recipient.'
       ),
     );
   }

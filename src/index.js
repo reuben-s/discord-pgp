@@ -3,7 +3,7 @@ const { Toggle } = require('./Toggle.js');
 export default class DiscordPgp {
 
     _selectChannelPatch(thisObject, channelInfo) {
-        const channel = BdApi.findModuleByProps("getChannel").getChannel(channelInfo[0].channelId);
+        const channel = this.getChannel(channelInfo[0].channelId);
 
         if (channel == undefined) 
         {
@@ -27,6 +27,8 @@ export default class DiscordPgp {
         
         const ChannelSelectorManager = BdApi.Webpack.getByKeys('selectChannel');
         
+        this.getChannel = BdApi.findModuleByProps("getChannel").getChannel;
+
         this.toggle = new Toggle();
         this._selectChannelPatch(null, [{ channelId: BdApi.Webpack.getByKeys('getChannelId').getChannelId() }]) // Check if we are currently in DMs when plugin starts.
 
