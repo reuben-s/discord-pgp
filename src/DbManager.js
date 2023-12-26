@@ -103,4 +103,23 @@ export class DbManager
             }
         });
     }
+
+    setUserPublicKey(channelId, publicKey)
+    {
+        if (channelId == undefined || publicKey == undefined) return;
+
+        this._fetchJson((err, db) => {
+            if (err)
+            {
+                console.log(err);
+                throw err;
+            }
+
+            if (db.hasOwnProperty(channelId))
+            {
+                db[channelId]['public-key'] = publicKey;
+                this._writeDb(db);
+            }
+        });
+    }
 }

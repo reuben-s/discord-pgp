@@ -1,6 +1,7 @@
 const { PgpUtil } = require('./PgpUtil.js');
 const { DbManager } = require('./DbManager.js');
-const { showPassphrasePrompt } = require("./PromptPassphrase.js");
+const { showPassphrasePrompt } = require('./PromptPassphrase.js');
+const { showAbortedMessage } = require('./AbortedMessage.js');
 
 // This code is really bad, will re-write at some point.
 
@@ -15,23 +16,63 @@ export class Toggle
         this.currentState = "show";
         
         this._MessageManager = BdApi.Webpack.getByKeys('sendMessage');
-        this._Dispatcher = BdApi.Webpack.getModule(m => m.dispatch && m.subscribe);
 
         this._sendMessagePatch = this._sendMessagePatch.bind(this);
         BdApi.Patcher.before('discord-pgp', this._MessageManager, 'sendMessage', this._sendMessagePatch);
 
-        this._dispatchPatch = this._dispatchPatch.bind(this);
-        BdApi.Patcher.before('discord-pgp', this._Dispatcher, 'dispatch', this._dispatchPatch);
+        this._messageCreateInterceptor();
 
         this._currentChannel = {};
         this._generateToggle();
     }
 
-    __dispatchPatch(thisObject, args)
+    _messageCreateInterceptor()
     {
-        if (args[0].type != "MESSAGE_CREATE");
+        window.webpackChunkdiscord_app.push([
+        [ Symbol() ],
+        {},
+        r => {
+            if (!r.b) return;
+            const FluxDispatcherModule = Object.values(r.c).find(m=>Array.isArray(m.exports?.default?._interceptors));
+            FluxDispatcherModule?.exports?.default?.addInterceptor((event) => {
+            if (event.type === "MESSAGE_CREATE") {
+                this._messageCreateHandler([event]);
+            };
+            });
+        }
+        ]);
+    }
 
-        args[0].message.content = `MODIFIED - ${args[0].message.content}`;
+    _messageCreateHandler(event)
+    {
+        if (event[0].message.author.id == this._currentUser.id) return; // If client sends message, it is handled by patching sendMessage rather than MESSAGE_CREATE dispatch.
+        if (event[0].message.channel_id != this._currentChannel.id) return; // Return if message is not from current channel
+        if (!this.toggled) return; // Return if messages are not currently being encrypted
+        // Otherwise continue
+
+        try
+        {
+            json = JSON.parse(message.content.substring(3, message.length - 3)); // Remove backticks from message and convert to json object
+            if (json["reqPublicKey"]) // User is requesting our public key. Send it and check that we have theirs. If we don't have it, send a reqPublicKey request back to them.
+            {
+                this._dbManager.getChannel(this._currentChannel.id, (channel) => {
+                    this._MessageManager.sendMessage(this._currentChannel.id, 
+                        { 
+                            content: `\`\`\`${JSON.stringify({ publicKey: channel['client']['public-key'], reqPublicKey: true ? channel['public-key'] == null : false })}\`\`\``, 
+                            invalidEmojis: [], 
+                            tts: false, 
+                            validNonShortcutEmojis: [], 
+                            automated: true 
+                        });
+                });
+            }
+        }
+        catch
+        {
+            console.log('discord-pgp-> Failed to decrypt message in channel where encryption is enabled.');
+        }
+
+        event[0].message.content = `MODIFIED - ${event[0].message.content}`;
     }
 
     _sendMessagePatch(thisObject, args)
@@ -44,8 +85,21 @@ export class Toggle
         }
         else
         {
-            // Messages encrypted here.
-            args[1].content = `MODIFIED ${args[1].content}`;
+            // Attempt to encrypt message with user's public key. Request public key if public key is not availiable.
+            this._dbManager.getChannel(this._currentChannel.id, (channel) => {
+                const publicKey = channel["public-key"];
+                if (publicKey == null) // User's public key is not yet available so request key and abort message plaintext send.
+                {
+                    args[1].content = `\`\`\`${JSON.stringify({ reqPublicKey: true })}\`\`\``;
+                    showAbortedMessage();
+                    console.log(thisObject);
+                }
+                else
+                {
+                    // Messages encrypted here.
+                    args[1].content = `MODIFIED ${args[1].content}`;
+                }
+            });
         }
 
         console.log(`discord-pgp-> Client sending new message: '${args[1].content}'`);
@@ -112,7 +166,14 @@ export class Toggle
                         PgpUtil.generateKeyPair(this._currentUser.username, this._currentUser.email, passphrase).then(({ privateKey, publicKey, revocationCertificate }) => {
                             this._dbManager.setClientKeyPair(this._currentChannel.id, publicKey, privateKey);
                             console.log('discord-pgp-> Generated new key pair.');
-                            this._MessageManager.sendMessage(this._currentChannel.id, { content: `\`\`\`${publicKey}\`\`\`Don't understand this message? You're probably not using [discord-pgp](https://github.com/reuben-s/discord-pgp).`, invalidEmojis: [], tts: false, validNonShortcutEmojis: [], automated: true });
+                            this._MessageManager.sendMessage(this._currentChannel.id, 
+                                { 
+                                    content: `\`\`\`${JSON.stringify({ publicKey: publicKey, reqPublicKey: true })}\`\`\``, 
+                                    invalidEmojis: [], 
+                                    tts: false, 
+                                    validNonShortcutEmojis: [], 
+                                    automated: true 
+                                });
                             console.log('discord-pgp-> Shared new public key.');
                         });
                     });
@@ -154,8 +215,23 @@ export class Toggle
         this.toggle.style.display = "none";
     }
 
+    _deleteIntercept()
+    {
+        window.webpackChunkdiscord_app.push([
+          [ Symbol() ],
+          {},
+          r => {
+            if (!r.b) return;
+            const FluxDispatcherModule = Object.values(r.c).find(m=>Array.isArray(m.exports?.default?._interceptors));
+            FluxDispatcherModule?.exports?.default?._interceptors?.splice(2, 1);
+            console.log("discord-pgp-> Removed dispatch inspector")
+          }
+        ]);
+    }
+
     remove()
     {   
+        this._deleteIntercept();
         this.toggle.remove();
         this.currentState = "stopped";
     }
