@@ -15,17 +15,23 @@ export class Toggle
         this.currentState = "show";
         
         this._MessageManager = BdApi.Webpack.getByKeys('sendMessage');
+        this._Dispatcher = BdApi.Webpack.getModule(m => m.dispatch && m.subscribe);
 
         this._sendMessagePatch = this._sendMessagePatch.bind(this);
         BdApi.Patcher.before('discord-pgp', this._MessageManager, 'sendMessage', this._sendMessagePatch);
-        /*
-        BdApi.Patcher.before('discord-pgp', MessageManager, 'receiveMessage', (thisObject, args) => {
-            console.log(args);
-        });
-        */
+
+        this._dispatchPatch = this._dispatchPatch.bind(this);
+        BdApi.Patcher.before('discord-pgp', this._Dispatcher, 'dispatch', this._dispatchPatch);
 
         this._currentChannel = {};
         this._generateToggle();
+    }
+
+    __dispatchPatch(thisObject, args)
+    {
+        if (args[0].type != "MESSAGE_CREATE");
+
+        args[0].message.content = `MODIFIED - ${args[0].message.content}`;
     }
 
     _sendMessagePatch(thisObject, args)
